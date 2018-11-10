@@ -1,0 +1,126 @@
+---
+title: 'Assignment 3: Data Transformation'
+output:
+  html_document: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Assignment Start: 12:01 AM Oct. 28
+#### Assignment End: 11:59 PM Nov. 10
+
+#### Explain your code where appropriate.
+
+Certain strains of the bacterium _Escherichia coli_ often found in undercooked foods become a serious health risk if they enter the blood stream. The organism is covered with a chemical compound called a lipopolysaccharide (LPS) that has a toxic effect on the hearts of infected animals. When LPS enters the circulatory system, heart function is affected and heart rate becomes highly elevated. A medical scientist wants to know if the residual effect on heart rate is different for LPS than for other compounds also known to increase heart rate.
+
+An experiment is designed to see how heart rate decreases over time after it has been elevated either with LPS or another compound that will serve as a control. LPS is used on 3 rats and the control compound on another 3. A monitor records continuous measurements (one per second) of the rats’ heart rates, but the measures to be used in the analysis are when each rat’s heart rate reaches a maximum and every 20 minutes thereafter. The experimenter wants to compare the rate of decline of the two compounds on heart rate during the hour after it has reached the maximum number of beats per minute.
+
+1. Read the `coli_wide.csv` file into R as a tibble named `coli_wide` and print it. The maximum heart-rate measurement is denoted by `t0` (the start time) with `tx` for `x = 20, 40, 60` the 20-minute sequence of follow-up measurements.
+```{r}
+library(tidyr)
+library(dplyr, warn.conflicts = FALSE)
+library(readr)
+# Put your R code here.
+coli_wide <- read_csv("coli_wide.csv")
+print(coli_wide)
+```
+
+2. Explain what is meant  by tidy data. Is the `coli_wide` data frame tidy? Explain.  
+
+Put your text answer here.
+
+Tidy data is defined as a data frame that is structured with certain characteristics that makes it easy for an analyst or a computer to extract needed variables. The following are 3 aspects of tidy data
+
+* Each variable forms a column
+
+* Each observation forms a row
+
+* Each type of observational unit forms a table
+
+Based on these 3 definitions, we can conclude that the `coli_wide` data frame is tidy. 
+
+3. Make `coli_wide` tidy using `gather` and `%>%`. This should result in a tibble with dimension $24 \times 4$, which you should store as `coli`. Name the time variable `time` and the heart-rate variable `heart_rate`.
+```{r}
+# Put your R code here.
+coli <- coli_wide %>% 
+  gather(time,heart_rate,t0:t60)
+coli
+```
+
+4. Build a workflow to remove the leading `t` in the `time` values and `arrange` the tibble by `treatment` and then `rat`. The tibble (renamed as `coli2`) should still be $24 \times 4$.
+```{r}
+# Put your R code here.
+coli2 <- coli %>%
+mutate (time=parse_number(time)) %>%
+  arrange(treatment,rat)
+coli2
+```
+
+5. Build a workflow to compute the mean `heart_rate` grouped by `treatment` and `time`. Name the resulting $8 \times 3$ tibble `coli_means`.
+```{r}
+# Put your R code here.
+coli_means <- coli2 %>%
+  group_by(treatment,time) %>%
+  summarize(mean_hr = mean(heart_rate))
+coli_means
+```
+
+6. Convert `coli_means` to wide format, i.e., make the rows `treatment` and the columns `time`. Hint: Look at the `spread` function.
+```{r}
+# Put your R code here.
+coli_means %>%
+  spread(time,mean_hr,fill=NA,convert = FALSE)
+coli_means
+```
+
+7. Using `coli_means`, build the workflow to plot the `treatment` $\times$ `time` interaction plot using `ggplot2`. Note: plot `time` on the x-axis, mean `heart_rate` on the y-axis, and use `treatment` for two segmented-lines plotted on the graph. Make the plot pretty with axes labels and a legend, etc.
+```{r}
+library(ggplot2)
+# Put your R code here
+ggplot(coli_means,aes(x=time,y=mean_hr,group=treatment))+
+  geom_line(aes(col=treatment))
+```
+geom_segment(aes(xend=time,yend=mean_hr,col=treatment))
+
+        
+8. The `coli` data is structured by a repeated-measures model given by:
+\[
+	y_{ijk} = \mu + \alpha_{i} + \beta_{ij} + \gamma_{k} + \alpha \gamma_{ik} + \varepsilon_{ijk},
+\]  
+where:  
+
+* $\mu$: is the overall mean;  
+* $\alpha_{i}$: is the effect of the $i^{th}$ treatment level;     
+* $\beta_{ij}$: is the random effect of the $j^{th}$ rat in treatment $i$ with $\beta_{ij}$ is $iin(0, \sigma_{B}^{2})$ for each $i$ (Error a);  
+* $\gamma_{k}$ is the effect of the $k^{th}$ time level;   
+* $\alpha \gamma_{ik}$: is  the interaction effect between $i^{th}$ treatment level and the $k^{th}$ time level;    
+* $\varepsilon_{ijk}$: is the subunit random component, $\varepsilon_{ijk} \sim iin(0, \sigma^{2})$ (Error b).  
+
+Note: `Error a` tests the `treatment` effect; `Error b` tests the `time` and the `time:treatment` interaction effects.
+
+Our principal interest is the `treatment` $\times$ `time` interaction (see the plot below). Insignificance indicates the lines are segmentwise parallel, i.e., the decrease does not depend on `treatment`.
+
+First convert `rat` and `time` to factors. Call the resulting tibble `coli` and print it.
+```{r}
+# Put your R code here.
+```
+
+Now build the model using the function `aov` with a two-way factorial with an `Error(treatment:rat)` term for the first-level error (the second-level error, i.e., `Error b`, is implicit). You need to specify `data=coli` to form an environment for the model. Summarize the model output using the function `summary`.
+```{r}
+# Put your R code here.
+```
+Discuss the conclusions.
+
+To help in your discussion here is the interaction plot. The plot in question 7 is a `ggplot2` version of this base graph.
+```
+# Make this code active.
+# The interaction plot is given by:
+within(coli,
+       interaction.plot(time, treatment, heart_rate)
+       )
+```
+
